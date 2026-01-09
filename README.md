@@ -1,6 +1,6 @@
 # HR 인적 네트워크 뷰어 - 완전 오프라인 SPA
 
-![HR Network Viewer](sample.png)
+![HR Network Viewer](https://raw.githubusercontent.com/AHTTOH/hrnetwork/master/sample.png)
 
 ## 개요
 
