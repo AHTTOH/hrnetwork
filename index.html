@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR 인적 네트워크 뷰어</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; object-src 'none';">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 상단 헤더 -->
+        <header id="header">
+            <h1>HR 인적 네트워크 뷰어</h1>
+            <div id="controls">
+                <!-- 파일 선택 -->
+                <div class="file-select-group">
+                    <span class="file-select-label">통합 파일 로드 (XLSX/CSV):</span>
+                    <label for="unified-file" class="file-select-button">
+                        <input type="file" id="unified-file" accept=".xlsx,.csv">
+                        <span>파일 선택</span>
+                    </label>
+                    <button id="load-sample-unified" class="btn-secondary">샘플 로드</button>
+                </div>
+                <div class="file-select-group" id="individual-files-section" style="display: none;">
+                    <span class="file-select-label-secondary">개별 파일:</span>
+                    <span class="file-label">Nodes:</span>
+                    <label for="nodes-file" class="file-select-button">
+                        <input type="file" id="nodes-file" accept=".xlsx,.csv">
+                        <span>파일 선택</span>
+                    </label>
+                    <span class="file-label">Edges:</span>
+                    <label for="edges-file" class="file-select-button">
+                        <input type="file" id="edges-file" accept=".xlsx,.csv">
+                        <span>파일 선택</span>
+                    </label>
+                </div>
+                <!-- 검색창 -->
+                <div class="search-group">
+                    <input type="text" id="search-input" placeholder="회사명 또는 사람 이름 검색 (초성 검색 지원)" aria-label="검색">
+                </div>
+            </div>
+        </header>
+
+        <!-- 메인 컨텐츠 영역 -->
+        <div id="main-content">
+            <!-- 사이드패널 (왼쪽) -->
+            <aside id="sidebar">
+                <div id="sidebar-content">
+                    <h2>필터</h2>
+                    
+                    <!-- 필터 섹션 -->
+                    <div class="filter-section">
+                        <h3>회사 필터</h3>
+                        <div class="multi-select-dropdown">
+                            <div class="multi-select-header">
+                                <input type="text" class="multi-select-search" placeholder="검색..." id="company-filter-search">
+                                <button class="multi-select-toggle" type="button">▼</button>
+                            </div>
+                            <select multiple id="company-filters" class="multi-select-hidden"></select>
+                            <div class="multi-select-options" id="company-filter-options"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-section">
+                        <h3>부서 필터</h3>
+                        <div class="multi-select-dropdown">
+                            <div class="multi-select-header">
+                                <input type="text" class="multi-select-search" placeholder="검색..." id="department-filter-search">
+                                <button class="multi-select-toggle" type="button">▼</button>
+                            </div>
+                            <select multiple id="department-filters" class="multi-select-hidden"></select>
+                            <div class="multi-select-options" id="department-filter-options"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-section">
+                        <h3>관계 필터</h3>
+                        <div class="multi-select-dropdown">
+                            <div class="multi-select-header">
+                                <input type="text" class="multi-select-search" placeholder="검색..." id="relation-filter-search">
+                                <button class="multi-select-toggle" type="button">▼</button>
+                            </div>
+                            <select multiple id="relation-filters" class="multi-select-hidden"></select>
+                            <div class="multi-select-options" id="relation-filter-options"></div>
+                        </div>
+                        <label class="toggle-label" style="margin-top: 12px;">
+                            <input type="checkbox" id="sensitive-relations-toggle" checked>
+                            민감 관계 표시 (배우자/친인척)
+                        </label>
+                    </div>
+                    
+                    <!-- 성능 옵션 -->
+                    <div class="filter-section">
+                        <h3>성능 옵션</h3>
+                        <label>
+                            낮은 가중치 엣지 숨김:
+                            <input type="checkbox" id="hide-low-weight-edges" checked>
+                        </label>
+                        <label>
+                            상위 엣지 수 제한:
+                            <input type="range" id="edge-limit-slider" min="0" max="10000" value="10000" step="100">
+                            <span id="edge-limit-value">10000</span>
+                        </label>
+                    </div>
+                    
+                    <!-- 레이아웃 옵션 -->
+                    <div class="filter-section">
+                        <h3>레이아웃 옵션</h3>
+                        <button id="randomize-layout" class="btn-secondary">랜덤 흩뿌리기</button>
+                    </div>
+                    
+                    <!-- 내보내기 -->
+                    <div class="filter-section">
+                        <h3>내보내기</h3>
+                        <button id="export-png" class="btn-primary">PNG 저장</button>
+                        <button id="export-svg" class="btn-primary">SVG 저장</button>
+                        <button id="export-csv-nodes" class="btn-secondary">선택 노드 CSV</button>
+                        <button id="export-csv-edges" class="btn-secondary">선택 엣지 CSV</button>
+                    </div>
+                    
+                    <!-- 저장/복원 -->
+                    <div class="filter-section">
+                        <h3>설정</h3>
+                        <button id="save-settings" class="btn-secondary">설정 저장</button>
+                        <button id="load-settings" class="btn-secondary">설정 불러오기</button>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="color-blind-toggle" checked>
+                            색각보정 모드
+                        </label>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="developer-mode-toggle">
+                            개발자 모드 (개별 파일 로드)
+                        </label>
+                        <button id="reset-settings" class="btn-secondary">초기화</button>
+                    </div>
+                    
+                    <!-- 노드 시각 효과 -->
+                    <div class="filter-section">
+                        <h3>노드 시각 효과</h3>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="centrality-based-size-toggle" checked>
+                            중심성 기반 크기 조정
+                        </label>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="department-colors-toggle" checked>
+                            부서별 색상 구분
+                        </label>
+                    </div>
+                    
+                    <!-- 관계별 시각화 설정 -->
+                    <div class="filter-section">
+                        <h3>관계별 시각화 설정</h3>
+                        <div id="relation-visual-settings"></div>
+                        <button id="reset-visual-settings" class="btn-secondary btn-top-margin">설정 초기화</button>
+                    </div>
+                    
+                    <!-- 전역 시각 효과 -->
+                    <div class="filter-section">
+                        <h3>전역 시각 효과</h3>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="node-shadow-toggle" checked>
+                            노드 그림자 효과
+                        </label>
+                        <label>
+                            엣지 곡선 스타일:
+                            <select id="edge-curve-style">
+                                <option value="bezier">베지어 곡선</option>
+                                <option value="straight">직선</option>
+                                <option value="taxi">택시</option>
+                                <option value="segments">세그먼트</option>
+                            </select>
+                        </label>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="highlight-glow-toggle" checked>
+                            선택 노드 하이라이트 강화
+                        </label>
+                        <label>
+                            비선택 노드 흐릿함:
+                            <input type="range" id="unselected-blur-slider" min="0" max="100" value="0" step="5">
+                            <span id="unselected-blur-value">0%</span>
+                        </label>
+                        <label>
+                            애니메이션 속도:
+                            <input type="range" id="animation-speed-slider" min="0.5" max="2.0" value="1.0" step="0.1">
+                            <span id="animation-speed-value">1.0x</span>
+                        </label>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="show-edge-label-toggle" checked>
+                            엣지 레이블 표시
+                        </label>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="hide-common-relation-labels-toggle">
+                            일반 관계 레이블 숨기기 (동료, 프로젝트)
+                        </label>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="auto-scale-edge-thickness-toggle" checked>
+                            엣지 자동 크기 조정 (관계 많을 때)
+                        </label>
+                        <label>
+                            노드 레이블 크기:
+                            <input type="range" id="node-label-size-slider" min="8" max="20" value="12" step="1">
+                            <span id="node-label-size-value">12px</span>
+                        </label>
+                    </div>
+                    
+                    <!-- 설정 프리셋 -->
+                    <div class="filter-section">
+                        <h3>설정 프리셋</h3>
+                        <select id="preset-select">
+                            <option value="default">기본값</option>
+                            <option value="highlight">강조 모드</option>
+                            <option value="minimal">미니멀 모드</option>
+                            <option value="colorblind">색각보정 모드</option>
+                        </select>
+                        <button id="apply-preset" class="btn-primary btn-small-margin">프리셋 적용</button>
+                        <button id="save-custom-preset" class="btn-secondary btn-small-margin">현재 설정 저장</button>
+                        <button id="load-custom-preset" class="btn-secondary btn-small-margin">저장된 설정 불러오기</button>
+                    </div>
+                </div>
+                
+                <!-- 검색 결과 패널 -->
+                <div id="search-results-panel" class="hidden">
+                    <h2 id="search-results-title">검색 결과</h2>
+                    <div id="search-results-content"></div>
+                </div>
+                
+                <!-- 노드 상세 정보 패널 -->
+                <div id="node-details-panel" class="hidden">
+                    <h2 id="node-details-title">노드 정보</h2>
+                    <div id="node-details-content"></div>
+                </div>
+            </aside>
+
+            <!-- 그래프 컨테이너 (중앙) -->
+            <main id="graph-container">
+                <div id="cy">
+                    <div id="empty-state" class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <h3>네트워크 분석을 시작하세요</h3>
+                        <p>통합 파일을 로드하거나 샘플 로드를 클릭하여 분석을 시작하세요.</p>
+                        <button id="empty-state-load-sample" class="btn-primary">샘플 로드</button>
+                    </div>
+                </div>
+                <div id="graph-info">
+                    <span id="node-count">노드: 0</span>
+                    <span id="edge-count">엣지: 0</span>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 매핑 위저드 모달 -->
+    <div id="mapping-wizard-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>컬럼 매핑 위저드</h2>
+            <div id="mapping-wizard-content"></div>
+            <div class="modal-actions">
+                <button id="mapping-cancel" class="btn-secondary">취소</button>
+                <button id="mapping-confirm" class="btn-primary">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 민감 관계 경고 모달 -->
+    <div id="sensitive-warning-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>경고</h2>
+            <p>민감한 관계 정보(배우자/친인척)를 표시하려고 합니다. 이 정보는 개인정보 보호 정책에 따라 주의해서 사용해야 합니다.</p>
+            <div class="modal-actions">
+                <button id="sensitive-warning-cancel" class="btn-secondary">취소</button>
+                <button id="sensitive-warning-confirm" class="btn-primary">계속</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 오류 메시지 모달 -->
+    <div id="error-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>오류</h2>
+            <div id="error-content"></div>
+            <div class="modal-actions">
+                <button id="error-close" class="btn-primary">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 로딩 오버레이 -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <p>처리 중...</p>
+    </div>
+
+    <!-- 라이브러리 로드 (전통 <script> 방식) -->
+    <script src="libs/cytoscape.min.js"></script>
+    <script src="libs/layout-base.js"></script>
+    <script src="libs/cose-base.js"></script>
+    <script src="libs/cytoscape-fcose.js"></script>
+    <script src="libs/xlsx.full.min.js"></script>
+    <script src="libs/papaparse.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+

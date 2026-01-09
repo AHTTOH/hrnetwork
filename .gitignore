@@ -1,0 +1,42 @@
+# 운영체제 파일
+Thumbs.db
+*.tmp
+*.temp
+
+# 로그 파일
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 환경 변수 파일
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE 파일
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 브라우저 캐시
+.cache/
+.parcel-cache/
+
+# Node.js (만약 나중에 추가된다면)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 빌드 파일 (만약 나중에 추가된다면)
+dist/
+build/
+
+# 임시 파일
+*.bak
+*.backup
